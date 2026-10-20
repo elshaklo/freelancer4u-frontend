@@ -1,0 +1,23 @@
+{
+  "verifiedAt": "2026-10-20T23:08:46.764015+00:00",
+  "method": "Both records submitted through browser forms; re-read via backend REST API",
+  "company": {
+    "name": "Exercise5-Frontend-Company-20261021",
+    "email": "frontend-test@example.invalid",
+    "id": "6ad7f46b898f2f899fa8a41e"
+  },
+  "job": {
+    "title": "Exercise5-Frontend-Job-20261021",
+    "description": "Browser-Test: Svelte Frontend → Spring Boot → MongoDB",
+    "jobType": "IMPLEMENT",
+    "earnings": 321.5,
+    "companyId": "6ad7f46b898f2f899fa8a41e",
+    "freelancerId": "",
+    "id": "6ad7f478898f2f899fa8a41f",
+    "jobState": "NEW"
+  },
+  "frontend": "http://localhost:5173",
+  "backend": "http://localhost:8080",
+  "database": "Freelancer (Atlas, existing configuration)",
+  "passed": true
+}
