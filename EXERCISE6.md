@@ -1,72 +1,72 @@
-# Freelancer4u – Übung 6: aktueller Stand
+# Freelancer4u – Übung 6 abgeschlossen
 
-Stand: 27.10.2026. Moodle wird ausdrücklich nicht abgegeben.
+Stand: 27.10.2026. Grundlage: ZHAW `3SE2-Uebung-6.pdf`.
 
-## Umsetzung und Tests
+## Ergebnis
 
-Auth0 Login/Signup/Logout, automatische Anmeldung nach Signup, geprüfte JWT-Cookies, Account-Seite, JWT-Weiterleitung, geschützte API und Admin-Berechtigungen sind umgesetzt. Normale Benutzer sehen Jobs; Admins dürfen zusätzlich Companies lesen/erstellen und Jobs erstellen. Direkte Seitenaufrufe und Formularaktionen prüfen dieselben Regeln.
+Die Umsetzung und die zugehörigen GitHub-Schritte sind abgeschlossen. Nur die Moodle-Abgabe bleibt bei Klodian.
 
-- Backend: Maven package erfolgreich. 20 Tests erfolgreich, einschliesslich separater lokaler MongoDB-Integration und HTTP-Sicherheitstests mit signierten JWTs.
-- Frontend: Produktionsbuild und 7 Tests erfolgreich.
-- Live gegen den vorhandenen Auth0-Tenant und das Backend auf Port 8080: normale Anmeldung, Jobs, Account, gesperrte Companies, Logout und anschliessend wieder gesperrte Seiten erfolgreich.
-- Live Signup mit neuem Testkonto: automatische Anmeldung, HttpOnly-Cookies, Home/Account/Jobs erfolgreich.
-- Externer Auth0-Logout liefert die erlaubte Rückleitung auf `http://localhost:5173/`.
-- Elf zusätzliche echte HTTP-Zugriffsprüfungen erfolgreich: fehlendes JWT, manipulierte Signatur und fehlende Admin-Rechte. Ergebnisse in `HTTP-Zugriffstests.json` neben dieser Datei.
-- Der echte Admin-Durchlauf und die Ausführung beider Postman-Sammlungen stehen noch aus, bis die Rollen-Konfiguration aktiviert ist.
+- Auth0 Login, Signup mit automatischem Login und Logout.
+- Account-Seite mit Profil und Rollen.
+- JWTs in HttpOnly-Cookies, deren Laufzeit an die Token-Gültigkeit gebunden ist. Frontend und Backend prüfen Signatur, Issuer, Audience und Gültigkeit.
+- JWT-Weiterleitung bei allen Frontend-Requests an die geschützte API.
+- Alle `/api`-Endpunkte verlangen Login. Fehlendes oder ungültiges Token liefert 401.
+- Company GET/POST und Job POST verlangen `admin`; fehlende Rechte liefern 403. Normale Benutzer dürfen Jobs lesen.
+- Companies-Menü und Create-Job-Formular nur für Admins; direkte Seitenaufrufe und POST-Aktionen ebenfalls geschützt. Normale Benutzer laden keine Companies.
+- Passwort- und Token-Debugausgaben entfernt. Vorhandene Login-Dateien wurden weiterverwendet; bestehende Fachlogik blieb erhalten.
+- Env-Vorlagen, Startanleitungen und Postman-Sammlungen aktualisiert.
 
-Der aktive Backend-Start verwendet die vorhandene Atlas-Verbindung und Datenbank `Freelancer`. Die automatischen MongoDB-Integrationstests verwendeten ausschliesslich die separate lokale Datenbank. Es wurden keine Zugangsdaten oder JWTs nach GitHub übertragen.
+Gemäss Übungs-PDF verwendet der vorhandene Lehrbeispiel-Flow den Passwort-Grant und das ID-Token. Deshalb wird die Auth0-Client-ID als Audience geprüft.
+
+## Erfolgreiche Prüfungen
+
+| Prüfung | Ergebnis |
+|---|---|
+| Backend Maven package | Erfolgreich |
+| Backend inklusive lokaler MongoDB-Integration | 20 Tests, keine Fehler, keine übersprungenen Tests |
+| Frontend npm test | 7 Tests, keine Fehler |
+| Frontend Produktionsbuild | Erfolgreich |
+| Bestehende API-Sammlung mit echtem Admin-JWT | 22 Requests, 35 Assertions, keine Fehler |
+| Übung-6-Security-Sammlung mit echten Auth0-JWTs | 12 Requests, 12 Assertions, keine Fehler |
+| Live Signup und automatischer Login | Erfolgreich |
+| Normaler Benutzer: Login, Jobs, Account, gesperrte Companies, Logout | Erfolgreich |
+| Admin: Companies, Create Company, Create Job und erneutes Lesen gespeicherter Daten | Erfolgreich |
+| Auth0-Logout und erlaubter Rücksprung auf localhost:5173 | Erfolgreich |
+| JWT-Rollen nach neuem Login | Normaler Benutzer: `[]`; Admin: `["admin"]` |
+
+Die Security-Tests prüfen unter anderem fehlende/ungültige Tokens, manipulierte Signaturen, abgelaufene Tokens, falschen Issuer und falsche Audience sowie die Rollenmatrix. Backend-Signaturprüfungen laufen über echte HTTP-Anfragen mit lokal signierten Testtokens; die abschliessenden Newman-Läufe verwenden echte Auth0-Tokens.
+
+Die automatischen Datenbanktests liefen gegen eine getrennte lokale Testdatenbank. Die Live-Frontend- und Newman-Tests liefen gegen das vorhandene Backend auf Port 8080 mit der konfigurierten Atlas-Datenbank `Freelancer`. Klar benannte Übungs-Testdaten bleiben zur Nachvollziehbarkeit gespeichert; bestehende Fachdaten wurden nicht verändert. Der bestehende Postman-Test `/testmongodb` legt zusätzlich ein Testdokument an.
 
 ## Auth0
 
-Bestehende Anwendung `Freelancer4u` und bestehendes persönliches Konto erhalten. Password-Grant und Cross-Origin Authentication waren bereits eingeschaltet. Der Default Directory funktioniert mit dem bestehenden Passwort-Login; Logout-URI ist durch einen echten Request bestätigt.
+Die Action `Freelancer4u user roles` ist deployed und im Post-Login-Flow aktiviert. Die gespeicherte Konfiguration ist durch neue Tokens mit den erwarteten Rollen bestätigt.
 
-Drei separate Testkonten wurden erstellt:
+Die Rolle `admin` ist dem separaten Testkonto `e6-admin-20261027@example.invalid` zugewiesen. Die Konten `e6-user-20261027@example.invalid` und `e6-signup-20261027@example.invalid` haben keine Admin-Rolle. Das vorhandene persönliche Konto wurde nicht verändert.
 
-- `e6-user-20261027@example.invalid`: normaler Benutzer
-- `e6-admin-20261027@example.invalid`: vorbereitetes Admin-Testkonto, Rollenzuweisung noch nicht bestätigt
-- `e6-signup-20261027@example.invalid`: über das Frontend registriert
+Die zufälligen Testpasswörter liegen ausschliesslich lokal in der ignorierten Datei `.env.auth0-test` im Frontend-Repository, mit nur für den Eigentümer lesbaren Dateirechten. Keine Passwörter oder JWTs wurden nach GitHub übertragen. Für eine spätere eigene Anmeldung können diese lokalen Testzugänge verwendet werden.
 
-Zufällige Passwörter liegen ausschliesslich lokal in der ignorierten Datei `.env.auth0-test` im Frontend-Repository, mit nur für den Eigentümer lesbaren Dateirechten. Keine persönlichen Passwörter wurden verwendet.
+## GitHub abgeschlossen
 
-Die Action `Freelancer4u user roles` ist erstellt und erfolgreich deployed:
+- [Backend PR #17](https://github.com/elshaklo/freelancer4u/pull/17): gemergt.
+- [Frontend PR #4](https://github.com/elshaklo/freelancer4u-frontend/pull/4): gemergt.
+- Backend-Issues #13, #15 und #16 sowie Frontend-Issues #1, #2 und #3 sind geschlossen.
+- Login-Sub-Issues und Rollen-Sub-Issue sind verknüpft. Alle sechs Issues sind im gemeinsamen Projekt «Freelancer4u SCRUM Planning», Iteration 5, Typ Feature und Status Done.
+- Beide lokalen Repositories stehen auf `main` und sind mit GitHub synchronisiert.
 
-```js
-exports.onExecutePostLogin = async (event, api) => {
-  if (event.authorization) {
-    api.idToken.setCustomClaim('user_roles', event.authorization.roles);
-    api.accessToken.setCustomClaim('user_roles', event.authorization.roles);
-  }
-};
-```
+Die Live-Tests sind in den Pull-Request-Beschreibungen dokumentiert. In den Repositories liegt dieser Abschlussstand als `EXERCISE6.md`; der Backend-Ordner `postman` enthält einen bereinigten Testnachweis ohne Tokens.
 
-Die leere Rolle `admin` ist erstellt. Die Zuweisung an das neue Admin-Testkonto ist im Auth0-Dialog vorbereitet, aber noch nicht gespeichert: Die Browsersteuerung verlangt für die Rechteerweiterung eine separate Bestätigung.
+## Lokal verwenden
 
-Die Action muss noch im offenen Tab «Post Login» zwischen Start und Complete gezogen und mit Apply aktiviert werden. Mehrere Versuche über die Browsersteuerung haben die Platzierung nicht ausgeführt; hierfür wurde Klodian um den kurzen manuellen Schritt gebeten.
+1. Backend: Die vorhandene ignorierte `.env` mit `MONGODB_URI`, `AUTH0_DOMAIN` und `AUTH0_CLIENT_ID` beibehalten und `./scripts/start.sh` ausführen.
+2. Frontend: Die vorhandene `.env` mit `API_BASE_URL`, `AUTH0_DOMAIN` und `AUTH0_CLIENT_ID` beibehalten und `npm run dev` ausführen.
+3. `http://localhost:5173` öffnen und mit einem Testkonto anmelden. Für Companies und Job-Erstellung das Admin-Konto verwenden.
 
-## GitHub
+Für Postman aktuelle Tokens in die lokalen Environment-Werte `ADMIN_JWT` und `USER_JWT` eintragen. Die Platzhalter im Repository bleiben leer. Auf einen anderen Entwicklungsport nur wechseln, wenn auch die Auth0-Origins und Logout-URLs angepasst werden.
 
-Beide Branches `exercise6-auth-roles` sind gepusht. Die Pull Requests sind erstellt, konfliktfrei und noch offen, bis der Admin-Live-Test besteht:
+## Verbleibende Abgabe
 
-- Backend: https://github.com/elshaklo/freelancer4u/pull/17
-- Frontend: https://github.com/elshaklo/freelancer4u-frontend/pull/4
+Gemäss PDF die Repository-URL auf Moodle abgeben. Es wurde nichts auf Moodle eingereicht.
 
-Im gemeinsamen Projekt «Freelancer4u SCRUM Planning» sind alle sechs Issues eingeplant: aktueller Sprint am 27.10.2026 ist Iteration 5 (21.–27.10.), Typ Feature, Status In progress.
-
-- Backend #15 «add login» mit Backend #13 und Frontend #1 als Sub-Issues
-- Frontend #2 «add admin page»
-- Backend #16 «add role-based backend access» mit Frontend #3 als Sub-Issue
-
-Die Pull Requests schliessen die zugehörigen Implementierungs-Issues beim Merge. Das Parent-Issue #15 und der Board-Status werden danach abgeschlossen. Noch wurde kein Merge und keine vorzeitige Schliessung durchgeführt.
-
-## Postman
-
-Die bestehende Sammlung `postman/Freelancer4U.postman_collection.json` verwendet jetzt `ADMIN_JWT` als Bearer-Token. `postman/DEV.postman_environment.json` enthält leere, als geheim markierte Platzhalter `ADMIN_JWT` und `USER_JWT`.
-
-Zusätzlich ist `postman/Exercise6-Security.postman_collection.json` mit zwölf Zugriffsprüfungen vorbereitet. Sie schreibt keine Datensätze. Nach Aktivierung der Rolle werden die Sammlungen mit aktuellen echten Testkonto-Tokens ausgeführt; Tokens bleiben lokal.
-
-## Noch offene Reihenfolge
-
-1. Klodian aktiviert die Action im Flow und bestätigt die Admin-Rolle für das neue Testkonto.
-2. Admin-Rolle speichern, neu anmelden, Admin-Frontend und Backend sowie Postman-Sammlungen testen.
-3. Ergebnis dokumentieren, Pull Requests mergen, Issues und Board abschliessen und lokale main-Branches aktualisieren.
-4. Moodle-Abgabe bleibt bei Klodian.
+- Backend: https://github.com/elshaklo/freelancer4u
+- Frontend: https://github.com/elshaklo/freelancer4u-frontend
