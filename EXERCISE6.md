@@ -1,41 +1,34 @@
-# Freelancer4u – Übung 6
+# Freelancer4u – Übung 6: aktueller Stand
 
-Stand: 27.10.2026. Grundlage: /Users/klodian/Downloads/3SE2-Uebung-6.pdf.
+Stand: 27.10.2026. Moodle wird ausdrücklich nicht abgegeben.
 
-## Umgesetzt
+## Umsetzung und Tests
 
-Vor Änderungen wurden beide Repositories, Branches und Änderungen geprüft. Das Backend war sauber auf `exercise5-postman-docs`. Das Frontend enthielt bereits vorgemerkte Login-Dateien auf `add-login-frontend`; diese wurden weiterverwendet.
+Auth0 Login/Signup/Logout, automatische Anmeldung nach Signup, geprüfte JWT-Cookies, Account-Seite, JWT-Weiterleitung, geschützte API und Admin-Berechtigungen sind umgesetzt. Normale Benutzer sehen Jobs; Admins dürfen zusätzlich Companies lesen/erstellen und Jobs erstellen. Direkte Seitenaufrufe und Formularaktionen prüfen dieselben Regeln.
 
-- Login, Signup mit automatischem Login und Logout über den vorhandenen Auth0-Flow aus der Übung.
-- Keine Ausgabe von Passwörtern, Axios-Fehlerobjekten oder Tokens mehr.
-- JWT bleibt in HttpOnly-Cookies. Die Cookie-Laufzeit entspricht der Token-Laufzeit. Frontend und Backend prüfen RS256-Signatur, Aussteller, Empfänger und Gültigkeit.
-- Backend: Spring Security OAuth2 Resource Server, zustandslose API, alle `/api`-Endpunkte geschützt. Fehlende/ungültige Tokens ergeben 401.
-- Rollen aus `user_roles`: Companies GET/POST und Job POST verlangen `admin`; fehlende Rolle ergibt 403. Job GET steht allen angemeldeten Benutzern offen. Vorhandene Service-Endpunkte verlangen Login, ohne zusätzliche, von der Übung nicht verlangte Rollenbeschränkungen.
-- Frontend: Companies-Menü und Create-Job-Formular nur für Admins. Normale Benutzer laden nur Jobs, keine Companies. Direkte Seitenaufrufe und POST-Aktionen sind ebenfalls geschützt.
-- Account-Seite unter `/account` mit Profil und Rollen, entsprechend der als «Admin-Page» bezeichneten Aufgabe.
-- Alle bestehenden Frontend-API-Requests senden den Bearer-Token. Backend-401/403 bleiben als entsprechende Fehlermeldungen sichtbar.
-- `.env.example` ergänzt. Vorhandene öffentliche Auth0-Domain/Client-ID ins lokale, ignorierte Backend-`.env` übernommen; MongoDB-Konfiguration erhalten.
+- Backend: Maven package erfolgreich. 20 Tests erfolgreich, einschliesslich separater lokaler MongoDB-Integration und HTTP-Sicherheitstests mit signierten JWTs.
+- Frontend: Produktionsbuild und 7 Tests erfolgreich.
+- Live gegen den vorhandenen Auth0-Tenant und das Backend auf Port 8080: normale Anmeldung, Jobs, Account, gesperrte Companies, Logout und anschliessend wieder gesperrte Seiten erfolgreich.
+- Live Signup mit neuem Testkonto: automatische Anmeldung, HttpOnly-Cookies, Home/Account/Jobs erfolgreich.
+- Externer Auth0-Logout liefert die erlaubte Rückleitung auf `http://localhost:5173/`.
+- Elf zusätzliche echte HTTP-Zugriffsprüfungen erfolgreich: fehlendes JWT, manipulierte Signatur und fehlende Admin-Rechte. Ergebnisse in `HTTP-Zugriffstests.json` neben dieser Datei.
+- Der echte Admin-Durchlauf und die Ausführung beider Postman-Sammlungen stehen noch aus, bis die Rollen-Konfiguration aktiviert ist.
 
-Die Übung verwendet ausdrücklich das ID-Token und den Passwort-Grant. Dieser bestehende Lehrbeispiel-Flow wurde erhalten; das Backend prüft deshalb die Auth0-Client-ID als Audience.
+Der aktive Backend-Start verwendet die vorhandene Atlas-Verbindung und Datenbank `Freelancer`. Die automatischen MongoDB-Integrationstests verwendeten ausschliesslich die separate lokale Datenbank. Es wurden keine Zugangsdaten oder JWTs nach GitHub übertragen.
 
-## Erfolgreich geprüft
+## Auth0
 
-- Backend `./mvnw package`: erfolgreich.
-- Backend mit aktivierten lokalen MongoDB-Integrationstests: **20 Tests, 0 Fehler, 0 übersprungen**. Separate Datenbank `freelancer4u_exercise6_integration`, kein Test gegen Atlas. Die bestehenden Datenbanktests verwenden einen simulierten angemeldeten Admin; die zusätzlichen Security-Tests prüfen separat echte signierte JWTs über HTTP.
-- Security-HTTP-Tests: 401 ohne Token, ungültiges Format, falsche Signatur, falscher Issuer, falsche Audience, abgelaufenes JWT; 403 für normale Benutzer bei Companies und Job-Erstellung; 200/201 für erlaubte Benutzer/Admin-Anfragen. Fehlende Rollen verursachen keinen Serverfehler.
-- Frontend `npm test`: **7 Tests erfolgreich**. Direkte Zugriffssperren, Rollenrechte für Formularaktionen, Weitergabe des Bearer-Tokens, keine Company-Abfrage für normale Benutzer, Logout-Cookies und ungültige Session geprüft. API-Antworten in diesen Tests sind simuliert.
-- Frontend `npm run build`: erfolgreich.
-- Frontend lokal per HTTP: `/`, `/login`, `/signup` liefern 200; `/jobs`, `/companies`, `/account` leiten ohne Login mit 303 zum Login weiter.
+Bestehende Anwendung `Freelancer4u` und bestehendes persönliches Konto erhalten. Password-Grant und Cross-Origin Authentication waren bereits eingeschaltet. Der Default Directory funktioniert mit dem bestehenden Passwort-Login; Logout-URI ist durch einen echten Request bestätigt.
 
-Ein echter Signup/Login gegen Klodians Auth0-Tenant wurde nicht durchgeführt: Es wurde kein neues Benutzerkonto angelegt und kein persönliches Passwort verwendet. Auch die vollständige Browser-Anmeldung und der externe Auth0-Logout müssen deshalb noch mit zwei eigenen Testkonten geprüft werden.
+Drei separate Testkonten wurden erstellt:
 
-## Auth0: Klodians Schritte
+- `e6-user-20261027@example.invalid`: normaler Benutzer
+- `e6-admin-20261027@example.invalid`: vorbereitetes Admin-Testkonto, Rollenzuweisung noch nicht bestätigt
+- `e6-signup-20261027@example.invalid`: über das Frontend registriert
 
-1. Bestehende Single Page Application öffnen. Domain und Client-ID in beiden `.env`-Dateien kontrollieren. Backend benötigt jetzt **auch `AUTH0_CLIENT_ID`**.
-2. Für den normalen Entwicklungsport `http://localhost:5173` die Application URIs und Cross-Origin Authentication gemäss PDF setzen. Allowed Logout URLs muss `http://localhost:5173/` enthalten. Callback/Web-Origin-Einträge ebenfalls auf den normalen Entwicklungsport setzen.
-3. Unter Advanced Settings den Password-Grant aktivieren. Tenant Default Directory auf `Username-Password-Authentication` setzen und die Database Connection für die App aktivieren.
-4. Rolle `admin` erstellen und einem separaten Testbenutzer zuweisen. Ein normales Testkonto ohne Rolle behalten.
-5. Post-Login Action erstellen, deployen, dem Login-Flow hinzufügen und Apply drücken:
+Zufällige Passwörter liegen ausschliesslich lokal in der ignorierten Datei `.env.auth0-test` im Frontend-Repository, mit nur für den Eigentümer lesbaren Dateirechten. Keine persönlichen Passwörter wurden verwendet.
+
+Die Action `Freelancer4u user roles` ist erstellt und erfolgreich deployed:
 
 ```js
 exports.onExecutePostLogin = async (event, api) => {
@@ -46,34 +39,34 @@ exports.onExecutePostLogin = async (event, api) => {
 };
 ```
 
-6. Nach Rollenänderungen aus- und wieder einloggen. Normaler Benutzer: Jobs sichtbar, Companies und Create Job fehlen. Admin: Companies und Create Job funktionieren. Account zeigt Rollen. Signup, anschliessenden automatischen Login und Logout mit erlaubter Rücksprungadresse prüfen.
-7. Für die JWT-Inspektion nach PDF das eigene Token lokal aus dem Cookie im Browser-Entwicklertool kopieren. Nicht in Git oder öffentliche Logs übernehmen. Ein verändertes Token muss am Backend 401 ergeben.
+Die leere Rolle `admin` ist erstellt. Die Zuweisung an das neue Admin-Testkonto ist im Auth0-Dialog vorbereitet, aber noch nicht gespeichert: Die Browsersteuerung verlangt für die Rechteerweiterung eine separate Bestätigung.
 
-## Lokal starten
+Die Action muss noch im offenen Tab «Post Login» zwischen Start und Complete gezogen und mit Apply aktiviert werden. Mehrere Versuche über die Browsersteuerung haben die Platzierung nicht ausgeführt; hierfür wurde Klodian um den kurzen manuellen Schritt gebeten.
 
-Backend im Backend-Ordner (vorher `.env` mit den vorhandenen Werten prüfen):
+## GitHub
 
-```sh
-set -a
-source .env
-set +a
-./mvnw spring-boot:run
-```
+Beide Branches `exercise6-auth-roles` sind gepusht. Die Pull Requests sind erstellt, konfliktfrei und noch offen, bis der Admin-Live-Test besteht:
 
-Frontend im Frontend-Ordner:
+- Backend: https://github.com/elshaklo/freelancer4u/pull/17
+- Frontend: https://github.com/elshaklo/freelancer4u-frontend/pull/4
 
-```sh
-npm install
-npm run dev
-```
+Im gemeinsamen Projekt «Freelancer4u SCRUM Planning» sind alle sechs Issues eingeplant: aktueller Sprint am 27.10.2026 ist Iteration 5 (21.–27.10.), Typ Feature, Status In progress.
 
-Die bestehenden Postman-Requests benötigen nun ein aktuelles JWT unter Authorization → Bearer Token. Company-Requests und Job POST benötigen das Token des Admin-Testbenutzers.
+- Backend #15 «add login» mit Backend #13 und Frontend #1 als Sub-Issues
+- Frontend #2 «add admin page»
+- Backend #16 «add role-based backend access» mit Frontend #3 als Sub-Issue
 
-## GitHub und Abgabe: Klodians Schritte
+Die Pull Requests schliessen die zugehörigen Implementierungs-Issues beim Merge. Das Parent-Issue #15 und der Board-Status werden danach abgeschlossen. Noch wurde kein Merge und keine vorzeitige Schliessung durchgeführt.
 
-GitHub wurde lesend geprüft, aber nicht verändert. Bereits offen: Backend #13 «add login to backend», Backend #15 «add login» und Frontend #1 «add login to frontend». Das gemeinsame Projekt «Freelancer4u SCRUM Planning» existiert.
+## Postman
 
-1. Im gemeinsamen Board die bestehenden Login-Issues dem aktuellen Sprint zuordnen, Frontend #1 und Backend #13 als Sub-Issues von Backend #15 verknüpfen. Parent mit Labels `frontend`, `backend` und Typ Feature pflegen.
-2. Frontend-Issue «add admin page» sowie je ein Rollen-Issue in Frontend/Backend ergänzen; Frontend-Rollen-Issue dem Backend-Rollen-Issue als Sub-Issue zuordnen. Im selben Board verwalten.
-3. Lokale Änderungen sind auf separaten Branches committet. Beide Branches pushen, Pull Requests erstellen und nach echten Auth0-Tests prüfen/mergen. Login-, Account- und Rollen-Issues erst nach bestätigten Akzeptanztests schliessen, Parent manuell abschliessen.
-4. Repository-URL gemäss PDF auf Moodle abgeben. Es wurde nichts auf Moodle eingereicht.
+Die bestehende Sammlung `postman/Freelancer4U.postman_collection.json` verwendet jetzt `ADMIN_JWT` als Bearer-Token. `postman/DEV.postman_environment.json` enthält leere, als geheim markierte Platzhalter `ADMIN_JWT` und `USER_JWT`.
+
+Zusätzlich ist `postman/Exercise6-Security.postman_collection.json` mit zwölf Zugriffsprüfungen vorbereitet. Sie schreibt keine Datensätze. Nach Aktivierung der Rolle werden die Sammlungen mit aktuellen echten Testkonto-Tokens ausgeführt; Tokens bleiben lokal.
+
+## Noch offene Reihenfolge
+
+1. Klodian aktiviert die Action im Flow und bestätigt die Admin-Rolle für das neue Testkonto.
+2. Admin-Rolle speichern, neu anmelden, Admin-Frontend und Backend sowie Postman-Sammlungen testen.
+3. Ergebnis dokumentieren, Pull Requests mergen, Issues und Board abschliessen und lokale main-Branches aktualisieren.
+4. Moodle-Abgabe bleibt bei Klodian.
