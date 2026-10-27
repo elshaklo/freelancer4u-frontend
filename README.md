@@ -1,18 +1,18 @@
-# Freelancer4U Frontend · 3SE2 Übung 5
+# Freelancer4U Frontend · 3SE2 Übung 6
 
-Svelte-5-Frontend auf Grundlage des originalen Moodle-Starters. Companies und Jobs werden über das Spring-Boot-Backend geladen und in MongoDB gespeichert.
+Svelte-5-Frontend mit Auth0 Login/Signup/Logout, Account-Seite und Admin-Rechten. Aktueller Teststand: [EXERCISE6.md](EXERCISE6.md). Companies und Jobs werden über das geschützte Spring-Boot-Backend geladen und in MongoDB gespeichert.
 
 ## Abgabelinks
 
 - Frontend: https://github.com/elshaklo/freelancer4u-frontend
 - Veröffentlichte API-Dokumentation: https://documenter.getpostman.com/view/58587091/2sBYHSzgRK
-- Backend und getestete Postman-Dateien: https://github.com/elshaklo/freelancer4u/tree/exercise5-postman-docs/postman
+- Backend und getestete Postman-Dateien: https://github.com/elshaklo/freelancer4u/tree/main/postman
 
 ## Lokal starten
 
 Voraussetzungen: Node.js in einer von den installierten Vite-/SvelteKit-Versionen unterstützten Version, npm und ein laufendes Freelancer4U-Backend mit gültiger MongoDB-Konfiguration. Getestet mit Node.js 24.15.0.
 
-1. Backend im separaten Backend-Projekt mit `./scripts/start.sh` starten. Die bestehende Backend-`.env` muss `MONGODB_URI` enthalten. Backend: `http://localhost:8080`.
+1. Backend im separaten Backend-Projekt mit `./scripts/start.sh` starten. Die bestehende Backend-`.env` muss `MONGODB_URI`, `AUTH0_DOMAIN` und `AUTH0_CLIENT_ID` enthalten. Backend: `http://localhost:8080`.
 2. Im Frontend-Verzeichnis:
 
 ```sh
@@ -21,12 +21,12 @@ npm install
 npm run dev
 ```
 
-`.env` enthält `API_BASE_URL=http://localhost:8080`. Die Datei bleibt wie `node_modules`, `.svelte-kit` und `build` durch `.gitignore` ausserhalb des Repositories. Keine MongoDB-Zugangsdaten gehören ins Frontend. Die Backend-URL wird ausschliesslich auf dem Server gelesen.
+`.env` enthält `API_BASE_URL=http://localhost:8080`, `AUTH0_DOMAIN` und `AUTH0_CLIENT_ID`. Die Auth0-Werte aus der eigenen Single Page Application eintragen; eine vorhandene `.env` erhalten. Die Datei bleibt wie `node_modules`, `.svelte-kit` und `build` durch `.gitignore` ausserhalb des Repositories. Keine MongoDB-Zugangsdaten gehören ins Frontend. Die Backend-URL wird ausschliesslich auf dem Server gelesen.
 
-3. `http://localhost:5173` öffnen. Falls Port 5173 belegt ist, die tatsächlich ausgegebene Adresse verwenden.
-4. Unter **Companies** eine Company mit Name und E-Mail anlegen. Unter **Jobs** diese Company auswählen und einen Job erstellen.
+3. `http://localhost:5173` öffnen. Falls ein anderer Port verwendet wird, müssen auch die erlaubten Origins und Logout-URLs in Auth0 dazu passen.
+4. Mit einem normalen Konto anmelden: **Jobs** und **Account** sind verfügbar. Mit einem Konto mit der Rolle **admin** anmelden: Zusätzlich sind **Companies** und das Formular **Create Job** verfügbar. Rollen müssen mit der Post-Login-Action im Claim `user_roles` stehen. Nach Änderungen neu anmelden.
 
-## Umfang
+## Umfang aus Übung 5
 
 - Startseite: **Welcome to Freelancer4U!**
 - `/companies`: alle Companies anzeigen und neue Companies über `GET/POST /api/company` erstellen.
