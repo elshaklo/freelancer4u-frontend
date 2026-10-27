@@ -1,18 +1,23 @@
+import { requireLogin, requireAdmin, apiError } from '#lib/server/access.js';
 import axios from 'axios';
 import { error, fail } from '@sveltejs/kit';
 import { API_BASE_URL } from '$app/env/private';
 
-export async function load() {
+export async function load({ locals }) {
+    requireAdmin(locals);
+    const headers = { Authorization: `Bearer ${locals.jwt_token}` };
     try {
-        const response = await axios.get(`${API_BASE_URL}/api/company`, { timeout: 10000 });
+        const response = await axios.get(`${API_BASE_URL}/api/company`, { headers, timeout: 10000 });
         return { companies: response.data };
-    } catch {
-        error(502, 'Could not load companies. Please check that the backend is running.');
+    } catch (cause) {
+        apiError(cause);
     }
 }
 
 export const actions = {
-    createCompany: async ({ request }) => {
+    createCompany: async ({ request, locals }) => {
+        requireAdmin(locals);
+        const headers = { Authorization: `Bearer ${locals.jwt_token}` };
         const data = await request.formData();
         const name = String(data.get('name') ?? '').trim();
         const email = String(data.get('email') ?? '').trim();
@@ -27,9 +32,10 @@ export const actions = {
         }
 
         try {
-            await axios.post(`${API_BASE_URL}/api/company`, { name, email }, { timeout: 10000 });
+            await axios.post(`${API_BASE_URL}/api/company`, { name, email }, { headers, timeout: 10000 });
             return { success: true };
-        } catch {
+        } catch (cause) {
+            if ([401, 403].includes(cause.response?.status)) apiError(cause);
             return fail(502, {
                 success: false,
                 error: 'Could not create company. Please check the backend and try again.',

@@ -1,32 +1,37 @@
+import { requireLogin, requireAdmin, apiError } from '#lib/server/access.js';
 import axios from "axios";
 import { error, fail } from '@sveltejs/kit';
 import { API_BASE_URL } from '$app/env/private';
 
-export async function load() {
+export async function load({ locals }) {
+    requireLogin(locals);
+    const headers = { Authorization: `Bearer ${locals.jwt_token}` };
 
     try {
         const [jobsResponse, companiesResponse] = await Promise.all([axios({
             method: "get",
             url: `${API_BASE_URL}/api/job`,
-            timeout: 10000,
-        }), axios({
+            headers, timeout: 10000,
+        }), locals.user?.user_roles?.includes('admin') ? axios({
             method: "get",
             url: `${API_BASE_URL}/api/company`,
-            timeout: 10000,
-        })]);
+            headers, timeout: 10000,
+        }) : Promise.resolve({ data: [] })]);
 
         return {
             jobs: jobsResponse.data,
             companies: companiesResponse.data
         };
 
-    } catch {
-        error(502, 'Could not load jobs. Please check that the backend is running.');
+    } catch (cause) {
+        apiError(cause);
     }
 }
 
 export const actions = {
-    createJob: async ({ request }) => {
+    createJob: async ({ request, locals }) => {
+        requireAdmin(locals);
+        const headers = { Authorization: `Bearer ${locals.jwt_token}` };
 
         const data = await request.formData();
         const job = {
@@ -47,15 +52,13 @@ export const actions = {
             await axios({
                 method: "post",
                 url: `${API_BASE_URL}/api/job`,
-                headers: {
-                    "Content-Type": "application/json",
-                },
                 data: job,
-                timeout: 10000,
+                headers, timeout: 10000,
             });
 
             return { success: true };
-        } catch {
+        } catch (cause) {
+            if ([401, 403].includes(cause.response?.status)) apiError(cause);
             return fail(502, {
                 success: false,
                 error: 'Could not create job'

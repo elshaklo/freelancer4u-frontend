@@ -9,6 +9,7 @@
 
 </script>
 
+{#if data.user?.user_roles?.includes("admin")}
 <h1 class="mt-3">Create Job</h1>
 
 {#if form?.success}
@@ -83,6 +84,8 @@
   </div>
   <button type="submit" class="btn btn-primary">Submit</button>
 </form>
+
+{/if}
 
 <h1>All Jobs</h1>
 <table class="table">
