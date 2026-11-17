@@ -3,24 +3,39 @@ import axios from "axios";
 import { error, fail } from '@sveltejs/kit';
 import { API_BASE_URL } from '$app/env/private';
 
-export async function load({ locals }) {
+export async function load({ url, locals }) {
     requireLogin(locals);
     const headers = { Authorization: `Bearer ${locals.jwt_token}` };
+    const currentPage = Number(url.searchParams.get('pageNumber') || 1);
+    const pageSize = Number(url.searchParams.get('pageSize') || 4);
+    if (!Number.isInteger(currentPage) || currentPage < 1 || !Number.isInteger(pageSize) || pageSize < 1) {
+        error(400, 'Invalid pagination parameters');
+    }
 
     try {
         const [jobsResponse, companiesResponse] = await Promise.all([axios({
             method: "get",
             url: `${API_BASE_URL}/api/job`,
+            params: { pageNumber: currentPage, pageSize, min: url.searchParams.get("min") ?? undefined, type: url.searchParams.get("type") ?? undefined },
             headers, timeout: 10000,
         }), locals.user?.user_roles?.includes('admin') ? axios({
             method: "get",
             url: `${API_BASE_URL}/api/company`,
+            params: { pageSize: 100, pageNumber: 1 },
             headers, timeout: 10000,
-        }) : Promise.resolve({ data: [] })]);
+        }) : Promise.resolve({ data: { content: [], totalPages: 0 } })]);
 
+        const companies = [...companiesResponse.data.content];
+        for (let page = 2; page <= companiesResponse.data.totalPages; page++) {
+            const response = await axios.get(`${API_BASE_URL}/api/company`, {
+                headers, timeout: 10000, params: { pageNumber: page, pageSize: 100 }
+            });
+            companies.push(...response.data.content);
+        }
         return {
-            jobs: jobsResponse.data,
-            companies: companiesResponse.data
+            currentPage, pageSize, nrOfPages: jobsResponse.data.totalPages,
+            jobs: jobsResponse.data.content,
+            companies
         };
 
     } catch (cause) {
@@ -63,6 +78,38 @@ export const actions = {
                 success: false,
                 error: 'Could not create job'
             });
+        }
+    },
+    assignToMe: async ({ request, locals }) => {
+        requireLogin(locals);
+        const data = await request.formData();
+        const jobId = String(data.get('jobId') ?? '').trim();
+        if (!jobId) return fail(400, { error: 'Job is required.' });
+        try {
+            await axios.put(`${API_BASE_URL}/api/service/me/assignjob`, null, {
+                params: { jobId },
+                headers: { Authorization: `Bearer ${locals.jwt_token}` }, timeout: 10000
+            });
+            return { message: 'Job assigned successfully.' };
+        } catch (cause) {
+            if ([401, 403].includes(cause.response?.status)) apiError(cause);
+            return fail(cause.response?.status === 400 ? 400 : 502, { error: 'Could not assign job. Please reload and try again.' });
+        }
+    },
+    completeMyJob: async ({ request, locals }) => {
+        requireLogin(locals);
+        const data = await request.formData();
+        const jobId = String(data.get('jobId') ?? '').trim();
+        if (!jobId) return fail(400, { error: 'Job is required.' });
+        try {
+            await axios.put(`${API_BASE_URL}/api/service/me/completejob`, null, {
+                params: { jobId },
+                headers: { Authorization: `Bearer ${locals.jwt_token}` }, timeout: 10000
+            });
+            return { message: 'Job completed successfully.' };
+        } catch (cause) {
+            if ([401, 403].includes(cause.response?.status)) apiError(cause);
+            return fail(cause.response?.status === 400 ? 400 : 502, { error: 'Could not complete job. Please reload and try again.' });
         }
     }
 }

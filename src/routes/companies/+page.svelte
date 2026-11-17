@@ -2,7 +2,7 @@
   import { enhance } from '$app/forms';
 
   let { data, form } = $props();
-  let companies = $derived(data.companies);
+  let { companies, currentPage, nrOfPages, pageSize } = $derived(data);
 </script>
 
 <h1 class="mt-3">Create Company</h1>
@@ -52,3 +52,15 @@
     </tbody>
   </table>
 </div>
+
+<nav aria-label="Companies pages">
+  <ul class="pagination">
+    {#each Array(nrOfPages) as _, i}
+      <li class="page-item">
+        <a class="page-link" class:active={currentPage === i + 1}
+          aria-current={currentPage === i + 1 ? 'page' : undefined}
+          href="/companies?pageNumber={i + 1}&pageSize={pageSize}">{i + 1}</a>
+      </li>
+    {/each}
+  </ul>
+</nav>

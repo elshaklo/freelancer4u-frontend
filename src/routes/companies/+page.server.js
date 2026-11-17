@@ -3,12 +3,18 @@ import axios from 'axios';
 import { error, fail } from '@sveltejs/kit';
 import { API_BASE_URL } from '$app/env/private';
 
-export async function load({ locals }) {
+export async function load({ url, locals }) {
     requireAdmin(locals);
     const headers = { Authorization: `Bearer ${locals.jwt_token}` };
+    const currentPage = Number(url.searchParams.get('pageNumber') || 1);
+    const pageSize = Number(url.searchParams.get('pageSize') || 4);
+    if (!Number.isInteger(currentPage) || currentPage < 1 || !Number.isInteger(pageSize) || pageSize < 1) {
+        error(400, 'Invalid pagination parameters');
+    }
+
     try {
-        const response = await axios.get(`${API_BASE_URL}/api/company`, { headers, timeout: 10000 });
-        return { companies: response.data };
+        const response = await axios.get(`${API_BASE_URL}/api/company`, { headers, timeout: 10000, params: { pageNumber: currentPage, pageSize } });
+        return { companies: response.data.content, currentPage, pageSize, nrOfPages: response.data.totalPages };
     } catch (cause) {
         apiError(cause);
     }

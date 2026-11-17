@@ -1,12 +1,17 @@
 <script>
   import { enhance } from "$app/forms";
+  import { page } from "$app/state";
 
   let { data, form } = $props();
 
-  // Use $derived to keep variables in sync with page data updates
-  let companies = $derived(data.companies);
-  let jobs = $derived(data.jobs);
+  let { user, companies, jobs, currentPage, nrOfPages, pageSize } = $derived(data);
 
+  function pageLink(number) {
+    const query = new URLSearchParams(page.url.searchParams);
+    query.set('pageNumber', number);
+    query.set('pageSize', pageSize);
+    return `/jobs?${query}`;
+  }
 </script>
 
 {#if data.user?.user_roles?.includes("admin")}
@@ -18,11 +23,7 @@
   </div>
 {/if}
 
-{#if form?.error}
-  <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    {form.error}
-  </div>
-{/if}
+
 
 <form class="mb-5" method="POST" action="?/createJob" use:enhance>
   <div class="row mb-3">
@@ -87,6 +88,12 @@
 
 {/if}
 
+{#if form?.error}
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {form.error}
+  </div>
+{/if}
+{#if form?.message}<div class="alert alert-success" role="status">{form.message}</div>{/if}
 <h1>All Jobs</h1>
 <table class="table">
   <thead>
@@ -97,6 +104,8 @@
       <th scope="col">Earnings</th>
       <th scope="col">State</th>
       <th scope="col">CompanyId</th>
+      <th scope="col">FreelancerId</th>
+      <th scope="col">Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -108,7 +117,38 @@
         <td>{job.earnings}</td>
         <td>{job.jobState}</td>
         <td>{job.companyId}</td>
+        <td>{job.freelancerId ?? ''}</td>
+        <td>
+          {#if job.jobState === 'DONE'}
+            <span class="badge bg-success">Done</span>
+          {:else if job.jobState === 'ASSIGNED'}
+            <span class="badge bg-secondary">Assigned</span>
+            {#if job.freelancerId === user?.email}
+              <form method="POST" action="?/completeMyJob" use:enhance class="d-inline">
+                <input type="hidden" name="jobId" value={job.id} />
+                <button class="btn btn-primary btn-sm" type="submit">Complete Job</button>
+              </form>
+            {/if}
+          {:else if !job.freelancerId && job.jobState === 'NEW'}
+            <form method="POST" action="?/assignToMe" use:enhance class="d-inline">
+              <input type="hidden" name="jobId" value={job.id} />
+              <button class="btn btn-primary btn-sm" type="submit">Assign to me</button>
+            </form>
+          {/if}
+        </td>
       </tr>
     {/each}
   </tbody>
 </table>
+
+<nav aria-label="Jobs pages">
+  <ul class="pagination">
+    {#each Array(nrOfPages) as _, i}
+      <li class="page-item">
+        <a class="page-link" class:active={currentPage === i + 1}
+          aria-current={currentPage === i + 1 ? 'page' : undefined}
+          href={pageLink(i + 1)}>{i + 1}</a>
+      </li>
+    {/each}
+  </ul>
+</nav>

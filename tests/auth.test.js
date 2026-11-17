@@ -9,30 +9,30 @@ const axios = (await import('axios')).default;
 const calls = [];
 axios.defaults.adapter = async config => {
   calls.push(config);
-  return { data: [], status: 200, statusText: 'OK', headers: {}, config };
+  return { data: { content: [], totalPages: 0 }, status: 200, statusText: 'OK', headers: {}, config };
 };
 const user = { isAuthenticated: true, jwt_token: 'test-token', user: { user_roles: [] } };
 const admin = { ...user, user: { user_roles: ['admin'] } };
 const request = fields => new Request('http://localhost/jobs', { method: 'POST', body: new URLSearchParams(fields) });
 test('anonymous direct pages redirect to login', async () => {
-  for (const page of [jobs, companies]) await assert.rejects(page.load({ locals: {} }), e => e.status === 303 && e.location === '/login');
+  for (const page of [jobs, companies]) await assert.rejects(page.load({ url: new URL('http://localhost/jobs'), locals: {} }), e => e.status === 303 && e.location === '/login');
 });
 test('normal user loads jobs without requesting companies and sends bearer token', async () => {
   calls.length = 0;
-  const result = await jobs.load({ locals: user });
+  const result = await jobs.load({ url: new URL('http://localhost/jobs'), locals: user });
   assert.deepEqual(result.companies, []);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].headers.Authorization, 'Bearer test-token');
 });
 test('admin loads jobs and companies with bearer token', async () => {
   calls.length = 0;
-  await jobs.load({ locals: admin });
+  await jobs.load({ url: new URL('http://localhost/jobs'), locals: admin });
   assert.equal(calls.length, 2);
   for (const call of calls) assert.equal(call.headers.Authorization, 'Bearer test-token');
 });
 test('direct non-admin company page and create actions are forbidden', async () => {
   calls.length = 0;
-  await assert.rejects(companies.load({ locals: user }), e => e.status === 403);
+  await assert.rejects(companies.load({ url: new URL('http://localhost/jobs'), locals: user }), e => e.status === 403);
   for (const action of [jobs.actions.createJob, companies.actions.createCompany]) {
     await assert.rejects(action({ locals: user, request: request({}) }), e => e.status === 403);
   }
@@ -60,4 +60,27 @@ test('invalid session cookie is cleared and remains logged out', async () => {
   assert.equal(event.locals.isAuthenticated, false);
   assert.equal(event.locals.jwt_token, undefined);
   assert.equal(removed.length, 2);
+});
+
+test('pagination forwards page size and filters and reads page metadata', async () => {
+  calls.length = 0;
+  const result = await jobs.load({ locals: user, url: new URL('http://localhost/jobs?pageNumber=2&pageSize=3&min=100&type=TEST') });
+  assert.deepEqual(result.jobs, []);
+  assert.equal(result.currentPage, 2);
+  assert.equal(result.nrOfPages, 0);
+  assert.deepEqual(calls[0].params, { pageNumber: 2, pageSize: 3, min: '100', type: 'TEST' });
+  calls.length = 0;
+  await companies.load({ locals: admin, url: new URL('http://localhost/companies?pageNumber=2&pageSize=3') });
+  assert.deepEqual(calls[0].params, { pageNumber: 2, pageSize: 3 });
+});
+test('self service actions require login and send only job ID with bearer token', async () => {
+  for (const [name, endpoint] of [['assignToMe', 'assignjob'], ['completeMyJob', 'completejob']]) {
+    const action = jobs.actions[name];
+    await assert.rejects(action({ locals: {}, request: request({jobId: 'job'}) }), e => e.status === 303);
+    calls.length = 0;
+    await action({ locals: user, request: request({jobId: 'job', freelancerId: 'other'}) });
+    assert.equal(calls[0].url.endsWith('/api/service/me/' + endpoint), true);
+    assert.deepEqual(calls[0].params, { jobId: 'job' });
+    assert.equal(calls[0].headers.Authorization, 'Bearer test-token');
+  }
 });
